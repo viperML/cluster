@@ -4,39 +4,6 @@ let
 
   machines = import ./machines.nix;
 
-  all-nixos = builtins.mapAttrs (
-    _: config:
-    pkgs.nixos {
-      imports = [
-        {
-          _file = ./machines.nix;
-          imports = [ config ];
-        }
-        <nixpkgs/nixos/modules/virtualisation/qemu-vm.nix>
-        {
-
-          virtualisation = {
-
-            sharedDirectories = lib.mkForce {
-              nix-store = {
-                source = builtins.storeDir;
-                target = "/nix/.ro-store";
-                securityModel = "none";
-              };
-            };
-
-            graphics = false;
-
-            # qemu.options = [
-            #   "-device usb-net,netdev=net0"
-            #   "-netdev user,id=net0,hostfwd=tcp::2222-:22"
-            # ];
-          };
-        }
-      ];
-    }
-  ) machines;
-
   json = pkgs.formats.json { };
 
   config = json.generate "process-compose.yml" {
@@ -47,6 +14,41 @@ let
       lib.imap0 (
         i:
         { name, value }:
+        let
+          nixos = pkgs.nixos {
+            imports = [
+              {
+                _file = ./machines.nix;
+                imports = [ value ];
+              }
+              <nixpkgs/nixos/modules/virtualisation/qemu-vm.nix>
+              {
+                networking.interfaces.eth1.ipv4.addresses = [
+                  {
+                    address = "192.168.100.1${toString i}";
+                    prefixLength = 24;
+                  }
+                ];
+                virtualisation = {
+                  qemu.networkingOptions = lib.mkForce [
+                    "-netdev user,id=mynet0,hostfwd=tcp::2222${toString i}-:22"
+                    "-device virtio-net-pci,netdev=mynet0"
+                    "-netdev socket,id=vlan,mcast=239.255.1.1:5558"
+                    "-device virtio-net-pci,netdev=vlan"
+                  ];
+                  sharedDirectories = lib.mkForce {
+                    nix-store = {
+                      source = builtins.storeDir;
+                      target = "/nix/.ro-store";
+                      securityModel = "none";
+                    };
+                  };
+                  graphics = false;
+                };
+              }
+            ];
+          };
+        in
         lib.nameValuePair name {
           command = lib.getExe (
             pkgs.writeShellApplication {
@@ -57,21 +59,18 @@ let
                 IMAGES_DIR="$PWD/images"
                 mkdir -p "$IMAGES_DIR"
                 export NIX_DISK_IMAGE="$IMAGES_DIR/${name}.qcow2"
-                export QEMU_NET_OPTS="hostfwd=tcp::2222${toString i}-:22"
-                export QEMU_OPTS="-net nic,model=virtio -net socket,mcast=230.0.0.1:1234"
                 set -x
-                exec ${lib.getExe value.config.system.build.vm}
+                exec ${lib.getExe nixos.config.system.build.vm}
               '';
             }
           );
         }
-      ) (lib.attrsToList all-nixos)
+      ) (lib.attrsToList machines)
     );
   };
 in
 
 {
-  inherit all-nixos;
   inherit config;
   inherit pkgs;
 
