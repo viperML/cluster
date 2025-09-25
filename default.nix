@@ -1,5 +1,7 @@
+{
+  pkgs ? import <nixpkgs> { },
+}:
 let
-  pkgs = import <nixpkgs> { };
   inherit (pkgs) lib;
 
   machines = import ./machines.nix;
@@ -23,7 +25,7 @@ let
               _file = ./machines.nix;
               imports = [ value ];
             }
-            <nixpkgs/nixos/modules/virtualisation/qemu-vm.nix>
+            (pkgs.path + /nixos/modules/virtualisation/qemu-vm.nix)
           ];
           networking.hostName = lib.mkForce name;
           networking.hosts = builtins.listToAttrs (
@@ -67,7 +69,6 @@ let
 
   process-compose-config = json.generate "process-compose.yml" {
     version = "0.5";
-    log_level = "debug";
     processes = builtins.mapAttrs (name: nixos: {
       command = lib.getExe (
         pkgs.writeShellApplication {
