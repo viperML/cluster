@@ -6,6 +6,8 @@ let
 
   json = pkgs.formats.json { };
 
+  nMachines = lib.length (builtins.attrNames machines);
+
   config = json.generate "process-compose.yml" {
     version = "0.5";
     log_level = "debug";
@@ -33,14 +35,18 @@ let
                 };
                 networking.defaultGateway = null;
                 virtualisation = {
-                  qemu.networkingOptions = lib.mkForce [
-                    # Forward SSH
-                    "-netdev user,id=mynet${toString i},hostfwd=tcp::${toString (22220 + i)}-:22"
-                    "-device virtio-net,netdev=mynet${toString i},mac=52:54:00:12:34:0${toString i}"
-                    # Internal connection
-                    "-netdev socket,id=net0,mcast=230.0.0.1:1234"
-                    "-device virtio-net,netdev=net0,mac=52:54:00:12:35:0${toString i}"
-                  ];
+                  qemu.networkingOptions = lib.mkForce (
+                    [
+                      # Forward SSH
+                      "-device virtio-net,netdev=mynet${toString i},mac=52:54:00:12:34:0${toString i}"
+                      "-netdev user,id=mynet${toString i},hostfwd=tcp::${toString (22220 + i)}-:22"
+                    ]
+                    ++ (lib.optionals (nMachines > 1) [
+                      # Internal connection
+                      "-device virtio-net,netdev=net0,mac=52:54:00:12:35:0${toString i}"
+                      "-netdev socket,id=net0,mcast=230.0.0.1:1234,localaddr=127.0.0.1"
+                    ])
+                  );
                   sharedDirectories = lib.mkForce {
                     nix-store = {
                       source = builtins.storeDir;

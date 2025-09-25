@@ -24,6 +24,7 @@ let
         pkgs.net-tools
         pkgs.tcpdump
         pkgs.python3
+        pkgs.iptables
       ];
 
       services.caddy = {
