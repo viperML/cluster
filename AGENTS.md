@@ -16,3 +16,5 @@ To connect to the machines, you can use SSH.
 ssh -p 22220 nixos@localhost # Connect to lab0
 ssh -p 22221 nixos@localhost # Connect to lab1
 ```
+
+You may use sudo to run commands as root.

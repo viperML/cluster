@@ -36,10 +36,10 @@ let
                   qemu.networkingOptions = lib.mkForce [
                     # Forward SSH
                     "-netdev user,id=mynet${toString i},hostfwd=tcp::${toString (22220 + i)}-:22"
-                    "-device virtio-net-pci,netdev=mynet${toString i},mac=52:54:00:12:34:0${toString i}"
+                    "-device virtio-net,netdev=mynet${toString i},mac=52:54:00:12:34:0${toString i}"
                     # Internal connection
-                    "-device e1000,netdev=intranet${toString i},mac=52:54:00:12:35:0${toString i}"
-                    "-netdev socket,id=intranet${toString i},mcast=239.192.168.1:1102"
+                    "-netdev socket,id=net0,mcast=230.0.0.1:1234"
+                    "-device virtio-net,netdev=net0,mac=52:54:00:12:35:0${toString i}"
                   ];
                   sharedDirectories = lib.mkForce {
                     nix-store = {
