@@ -22,3 +22,5 @@ $ ssh -p 22220 -o StrictHostKeyChecking=no nixos@localhost
 ```
 
 The QEMU machines run without any need of root privileges on the host system, using user-mode networking.
+
+![](./pic.png)
