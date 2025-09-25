@@ -25,6 +25,13 @@ let
         pkgs.tcpdump
         pkgs.python3
       ];
+
+      services.caddy = {
+        enable = true;
+        virtualHosts.":80".extraConfig = ''
+          respond "Hello World"
+        '';
+      };
     };
 
 in

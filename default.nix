@@ -23,18 +23,26 @@ let
               }
               <nixpkgs/nixos/modules/virtualisation/qemu-vm.nix>
               {
-                networking.interfaces.eth1.ipv4.addresses = [
-                  {
-                    address = "192.168.100.1${toString i}";
-                    prefixLength = 24;
-                  }
-                ];
+                networking.interfaces.eth1.ipv4 = {
+                  addresses = [
+                    {
+                      address = "192.168.100.1${toString i}";
+                      prefixLength = 24;
+                    }
+                  ];
+                  routes = [
+                    {
+                      address = "192.168.100.0";
+                      prefixLength = 24;
+                    }
+                  ];
+                };
                 virtualisation = {
                   qemu.networkingOptions = lib.mkForce [
                     "-netdev user,id=mynet0,hostfwd=tcp::2222${toString i}-:22"
-                    "-device virtio-net-pci,netdev=mynet0"
+                    "-device virtio-net-pci,netdev=mynet0,mac=52:54:00:12:34:0${toString i}"
                     "-netdev socket,id=vlan,mcast=239.255.1.1:5558"
-                    "-device virtio-net-pci,netdev=vlan"
+                    "-device virtio-net-pci,netdev=vlan,mac=52:54:00:56:78:0${toString i}"
                   ];
                   sharedDirectories = lib.mkForce {
                     nix-store = {
