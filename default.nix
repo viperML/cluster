@@ -6,8 +6,6 @@ let
 
   machines = import ./machines.nix;
 
-  json = pkgs.formats.json { };
-
   nMachines = lib.length (builtins.attrNames machines);
 
   toHexPadded = number: lib.fixedWidthString 2 "0" (lib.toHexString number);
@@ -67,7 +65,7 @@ let
     ) (lib.attrsToList machines)
   );
 
-  process-compose-config = json.generate "process-compose.yml" {
+  process-compose-config = (pkgs.formats.json { }).generate "process-compose.yml" {
     version = "0.5";
     processes = builtins.mapAttrs (name: nixos: {
       command = lib.getExe (
