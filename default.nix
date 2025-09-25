@@ -26,23 +26,20 @@ let
                 networking.interfaces.eth1.ipv4 = {
                   addresses = [
                     {
-                      address = "192.168.100.1${toString i}";
-                      prefixLength = 24;
-                    }
-                  ];
-                  routes = [
-                    {
-                      address = "192.168.100.0";
+                      address = "192.168.100.${toString (i + 10)}";
                       prefixLength = 24;
                     }
                   ];
                 };
+                networking.defaultGateway = null;
                 virtualisation = {
                   qemu.networkingOptions = lib.mkForce [
-                    "-netdev user,id=mynet0,hostfwd=tcp::2222${toString i}-:22"
-                    "-device virtio-net-pci,netdev=mynet0,mac=52:54:00:12:34:0${toString i}"
-                    "-netdev socket,id=vlan,mcast=239.255.1.1:5558"
-                    "-device virtio-net-pci,netdev=vlan,mac=52:54:00:56:78:0${toString i}"
+                    # Forward SSH
+                    "-netdev user,id=mynet${toString i},hostfwd=tcp::${toString (22220 + i)}-:22"
+                    "-device virtio-net-pci,netdev=mynet${toString i},mac=52:54:00:12:34:0${toString i}"
+                    # Internal connection
+                    "-device e1000,netdev=intranet${toString i},mac=52:54:00:12:35:0${toString i}"
+                    "-netdev socket,id=intranet${toString i},mcast=239.192.168.1:1102"
                   ];
                   sharedDirectories = lib.mkForce {
                     nix-store = {

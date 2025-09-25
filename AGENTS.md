@@ -2,13 +2,13 @@ This is a simple project with nix to start a cluster of virtual machines using Q
 
 # Usage
 
-To start the cluster, run:
+To start the cluster in the background, run:
 
 ```
-nix run ./default.nix run
+nix run -f ./default.nix run &
 ```
 
-This will be a foreground process, so you might want to manage that.
+Remember to run `pkill -f process-compose` to kill it if needed.
 
 To connect to the machines, you can use SSH.
 
