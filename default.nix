@@ -10,6 +10,8 @@ let
 
   toHexPadded = number: lib.fixedWidthString 2 "0" (lib.toHexString number);
 
+  ipFor = i: "192.168.100.${toString (i + 10)}";
+
   configs = builtins.listToAttrs (
     lib.imap0 (
       i:
@@ -23,10 +25,14 @@ let
             }
             <nixpkgs/nixos/modules/virtualisation/qemu-vm.nix>
           ];
+          networking.hostName = lib.mkForce name;
+          networking.hosts = builtins.listToAttrs (
+            lib.imap0 (j: name: lib.nameValuePair (ipFor j) [ name ]) (builtins.attrNames machines)
+          );
           networking.interfaces.eth1.ipv4 = {
             addresses = [
               {
-                address = "192.168.100.${toString (i + 10)}";
+                address = ipFor i;
                 prefixLength = 24;
               }
             ];
@@ -62,24 +68,22 @@ let
   process-compose-config = json.generate "process-compose.yml" {
     version = "0.5";
     log_level = "debug";
-    processes = builtins.mapAttrs (
-      name: nixos: {
-        command = lib.getExe (
-          pkgs.writeShellApplication {
-            name = "command";
-            runtimeInputs = [ pkgs.coreutils ];
-            inheritPath = false;
-            text = ''
-              IMAGES_DIR="$PWD/images"
-              mkdir -p "$IMAGES_DIR"
-              export NIX_DISK_IMAGE="$IMAGES_DIR/${name}.qcow2"
-              set -x
-              exec ${lib.getExe nixos.config.system.build.vm}
-            '';
-          }
-        );
-      }
-    ) configs;
+    processes = builtins.mapAttrs (name: nixos: {
+      command = lib.getExe (
+        pkgs.writeShellApplication {
+          name = "command";
+          runtimeInputs = [ pkgs.coreutils ];
+          inheritPath = false;
+          text = ''
+            IMAGES_DIR="$PWD/images"
+            mkdir -p "$IMAGES_DIR"
+            export NIX_DISK_IMAGE="$IMAGES_DIR/${name}.qcow2"
+            set -x
+            exec ${lib.getExe nixos.config.system.build.vm}
+          '';
+        }
+      );
+    }) configs;
   };
 in
 
