@@ -14,8 +14,6 @@ let
         extraGroups = [ "wheel" ];
       };
 
-      services.getty.autologinUser = "nixos";
-
       networking.firewall.enable = false;
 
       security.sudo.wheelNeedsPassword = false;
@@ -49,5 +47,12 @@ in
     {
       inherit imports;
       networking.hostName = "lab1";
+    };
+
+  lab2 =
+    { config, pkgs, ... }:
+    {
+      inherit imports;
+      networking.hostName = "lab2";
     };
 }

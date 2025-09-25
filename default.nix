@@ -8,82 +8,84 @@ let
 
   nMachines = lib.length (builtins.attrNames machines);
 
-  config = json.generate "process-compose.yml" {
-    version = "0.5";
-    log_level = "debug";
+  toHexPadded = number: lib.fixedWidthString 2 "0" (lib.toHexString number);
 
-    processes = builtins.listToAttrs (
-      lib.imap0 (
-        i:
-        { name, value }:
-        let
-          nixos = pkgs.nixos {
-            imports = [
+  configs = builtins.listToAttrs (
+    lib.imap0 (
+      i:
+      { name, value }:
+      lib.nameValuePair name (
+        pkgs.nixos {
+          imports = [
+            {
+              _file = ./machines.nix;
+              imports = [ value ];
+            }
+            <nixpkgs/nixos/modules/virtualisation/qemu-vm.nix>
+          ];
+          networking.interfaces.eth1.ipv4 = {
+            addresses = [
               {
-                _file = ./machines.nix;
-                imports = [ value ];
-              }
-              <nixpkgs/nixos/modules/virtualisation/qemu-vm.nix>
-              {
-                networking.interfaces.eth1.ipv4 = {
-                  addresses = [
-                    {
-                      address = "192.168.100.${toString (i + 10)}";
-                      prefixLength = 24;
-                    }
-                  ];
-                };
-                networking.defaultGateway = null;
-                virtualisation = {
-                  qemu.networkingOptions = lib.mkForce (
-                    [
-                      # Forward SSH
-                      "-device virtio-net,netdev=mynet${toString i},mac=52:54:00:12:34:0${toString i}"
-                      "-netdev user,id=mynet${toString i},hostfwd=tcp::${toString (22220 + i)}-:22"
-                    ]
-                    ++ (lib.optionals (nMachines > 1) [
-                      # Internal connection
-                      "-device virtio-net,netdev=net0,mac=52:54:00:12:35:0${toString i}"
-                      "-netdev socket,id=net0,mcast=230.0.0.1:1234,localaddr=127.0.0.1"
-                    ])
-                  );
-                  sharedDirectories = lib.mkForce {
-                    nix-store = {
-                      source = builtins.storeDir;
-                      target = "/nix/.ro-store";
-                      securityModel = "none";
-                    };
-                  };
-                  graphics = false;
-                };
+                address = "192.168.100.${toString (i + 10)}";
+                prefixLength = 24;
               }
             ];
           };
-        in
-        lib.nameValuePair name {
-          command = lib.getExe (
-            pkgs.writeShellApplication {
-              name = "command";
-              runtimeInputs = [ pkgs.coreutils ];
-              inheritPath = false;
-              text = ''
-                IMAGES_DIR="$PWD/images"
-                mkdir -p "$IMAGES_DIR"
-                export NIX_DISK_IMAGE="$IMAGES_DIR/${name}.qcow2"
-                set -x
-                exec ${lib.getExe nixos.config.system.build.vm}
-              '';
-            }
-          );
+          networking.defaultGateway = null;
+          virtualisation = {
+            qemu.networkingOptions = lib.mkForce (
+              [
+                # Forward SSH
+                "-device virtio-net,netdev=mynet${toString i},mac=52:54:00:12:34:${toHexPadded i}"
+                "-netdev user,id=mynet${toString i},hostfwd=tcp::${toString (22220 + i)}-:22"
+              ]
+              ++ (lib.optionals (nMachines > 1) [
+                # Internal connection
+                "-device virtio-net,netdev=net0,mac=52:54:00:12:35:${toHexPadded i}"
+                "-netdev socket,id=net0,mcast=230.0.0.1:1234,localaddr=127.0.0.1"
+              ])
+            );
+            sharedDirectories = lib.mkForce {
+              nix-store = {
+                source = builtins.storeDir;
+                target = "/nix/.ro-store";
+                securityModel = "none";
+              };
+            };
+            graphics = false;
+          };
         }
-      ) (lib.attrsToList machines)
-    );
+      )
+    ) (lib.attrsToList machines)
+  );
+
+  process-compose-config = json.generate "process-compose.yml" {
+    version = "0.5";
+    log_level = "debug";
+    processes = builtins.mapAttrs (
+      name: nixos: {
+        command = lib.getExe (
+          pkgs.writeShellApplication {
+            name = "command";
+            runtimeInputs = [ pkgs.coreutils ];
+            inheritPath = false;
+            text = ''
+              IMAGES_DIR="$PWD/images"
+              mkdir -p "$IMAGES_DIR"
+              export NIX_DISK_IMAGE="$IMAGES_DIR/${name}.qcow2"
+              set -x
+              exec ${lib.getExe nixos.config.system.build.vm}
+            '';
+          }
+        );
+      }
+    ) configs;
   };
 in
 
 {
-  inherit config;
-  inherit pkgs;
+
+  inherit configs process-compose-config pkgs;
 
   run = pkgs.writeShellApplication {
     name = "run";
@@ -93,7 +95,7 @@ in
     ];
     inheritPath = false;
     text = ''
-      process-compose -t=false -f ${config}
+      process-compose -t=false -f ${process-compose-config}
     '';
   };
 }
