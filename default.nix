@@ -30,11 +30,13 @@ let
             (pkgs.path + /nixos/modules/virtualisation/qemu-vm.nix)
           ];
           networking.hostName = lib.mkForce name;
+          # Add other machines from the cluster to /etc/hosts
           networking.hosts = builtins.listToAttrs (
             lib.imap0 (j: name: lib.nameValuePair (ipFor j) ((lib.mkIf (i != j) [ name ]))) (
               builtins.attrNames machines
             )
           );
+          # Static configuration for the IP
           networking.interfaces.eth1.ipv4 = {
             addresses = [
               {
@@ -45,6 +47,7 @@ let
           };
           networking.defaultGateway = null;
           virtualisation = {
+            # mkForce to remove the default networkingOptions
             qemu.networkingOptions = lib.mkForce (
               [
                 # Forward SSH
@@ -57,6 +60,7 @@ let
                 "-netdev socket,id=net0,mcast=230.0.0.1:50821,localaddr=127.0.0.1"
               ])
             );
+            # mkForce to remove the shared directory that may clash
             sharedDirectories = lib.mkForce {
               nix-store = {
                 source = builtins.storeDir;
@@ -96,6 +100,7 @@ in
         pkgs.bash
       ]
     }'
+    set -x
     exec process-compose -t=false -f ${process-compose-config}
   '';
 }
