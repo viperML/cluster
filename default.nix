@@ -1,5 +1,6 @@
 {
   pkgs ? import <nixpkgs> { },
+  machines ? import ./machines.nix,
 }:
 let
   inherit (pkgs) lib;
@@ -23,10 +24,7 @@ let
       lib.nameValuePair name (
         pkgs.nixos {
           imports = [
-            {
-              _file = ./machines.nix;
-              imports = [ value ];
-            }
+            value
             (pkgs.path + /nixos/modules/virtualisation/qemu-vm.nix)
           ];
           networking.hostName = lib.mkForce name;
@@ -90,8 +88,7 @@ let
 in
 
 {
-
-  inherit configs process-compose-config pkgs;
+  inherit configs process-compose-config;
 
   run = pkgs.writeShellScriptBin "run-cluster" ''
     export PATH='${
