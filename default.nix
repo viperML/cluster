@@ -82,7 +82,7 @@ let
     processes = builtins.mapAttrs (name: nixos: {
       command = pkgs.writeShellScript "start-${name}" ''
         IMAGES_DIR="$PWD/images"
-        mkdir -p "$IMAGES_DIR"
+        ${pkgs.coreutils}/bin/mkdir -p "$IMAGES_DIR"
         export NIX_DISK_IMAGE="$IMAGES_DIR/${name}.qcow2"
         set -x
         exec ${lib.getExe nixos.config.system.build.vm}
