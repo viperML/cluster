@@ -27,6 +27,10 @@ let
             value
             (pkgs.path + /nixos/modules/virtualisation/qemu-vm.nix)
           ];
+          # Console not usable anyways, because of process-compose
+          console.enable = false;
+          # For testing purposes
+          networking.firewall.enable = lib.mkDefault false;
           networking.hostName = lib.mkForce name;
           # Add other machines from the cluster to /etc/hosts
           networking.hosts = builtins.listToAttrs (
