@@ -5,8 +5,6 @@
 let
   inherit (pkgs) lib;
 
-  machines = import ./machines.nix;
-
   nMachines =
     let
       n = lib.length (builtins.attrNames machines);
