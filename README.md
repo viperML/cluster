@@ -29,4 +29,19 @@ The QEMU machines run without any need of root privileges on the host system, us
 
 ```
 $ npins init
+$ npins add github viperML cluster -b main
+$ tee default.nix <<EOF
+let
+  sources = import ./npins;
+  pkgs = import sources.nixpkgs { };
+in
+import sources.cluster {
+  inherit pkgs;
+  machines = {
+    lab1 = { };
+    lab2 = { };
+  };
+}
+EOF
+$ nix run -f ./default.nix run -L
 ```
