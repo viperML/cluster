@@ -37,8 +37,8 @@ let
             )
           );
           # Static configuration for the IP
-          networking.interfaces.eth1.ipv4 = lib.mkIf (nMachines > 1) {
-            addresses = [
+          networking.interfaces = lib.mkIf (nMachines > 1) {
+            eth1.ipv4.addresses = [
               {
                 address = ipFor i;
                 prefixLength = 24;
